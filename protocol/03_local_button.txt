@@ -1,0 +1,103 @@
+Status changed by button on the display board, in this case the speed is changed from 6 to 2.
+
+
+[15:27:00.842915] [Wifi<--MCU] [seq=06] Status report response
+    dpId 1 (power): boolean = True
+    dpId 2 (display always on): boolean = True
+    dpId 3 (mode): enum = 3
+    dpId 4 (fan speed): enum = 6
+    dpId 5 (beeper): boolean = False
+    dpId 6 (auto-off timer (m)): int32 = 0
+    dpId 7 (unknown): int32 = 0
+    dpId 8 (oscillation): boolean = False
+    dpId 9 (unknown): enum = 0
+    dpId 11 (temperature (F)): int32 = 85
+    dpId 12 (unknown): boolean = False
+[15:27:08.372444] [Wifi-->MCU] [seq=29] Heartbeat request
+[15:27:08.380397] [Wifi<--MCU] [seq=29] Heartbeat response, status=0x1
+[15:27:18.363572] [Wifi-->MCU] [seq=2a] Heartbeat request
+[15:27:18.375784] [Wifi<--MCU] [seq=2a] Heartbeat response, status=0x1
+[15:27:28.354089] [Wifi-->MCU] [seq=2b] Heartbeat request
+[15:27:28.360642] [Wifi<--MCU] [seq=2b] Heartbeat response, status=0x1
+[15:27:38.346869] [Wifi-->MCU] [seq=2c] Heartbeat request
+[15:27:38.355609] [Wifi<--MCU] [seq=2c] Heartbeat response, status=0x1
+[15:27:48.346904] [Wifi-->MCU] [seq=2d] Heartbeat request
+[15:27:48.349981] [Wifi<--MCU] [seq=2d] Heartbeat response, status=0x1
+[15:27:58.347434] [Wifi-->MCU] [seq=2e] Heartbeat request
+[15:27:58.355554] [Wifi<--MCU] [seq=2e] Heartbeat response, status=0x1
+[15:28:08.346144] [Wifi-->MCU] [seq=2f] Heartbeat request
+[15:28:08.349827] [Wifi<--MCU] [seq=2f] Heartbeat response, status=0x1
+[15:28:18.347048] [Wifi-->MCU] [seq=30] Heartbeat request
+[15:28:18.353763] [Wifi<--MCU] [seq=30] Heartbeat response, status=0x1
+[15:28:28.345635] [Wifi-->MCU] [seq=31] Heartbeat request
+[15:28:28.348090] [Wifi<--MCU] [seq=31] Heartbeat response, status=0x1
+[15:28:38.346665] [Wifi-->MCU] [seq=32] Heartbeat request
+[15:28:38.352587] [Wifi<--MCU] [seq=32] Heartbeat response, status=0x1
+[15:28:48.347037] [Wifi-->MCU] [seq=33] Heartbeat request
+[15:28:48.357880] [Wifi<--MCU] [seq=33] Heartbeat response, status=0x1
+[15:28:58.347436] [Wifi-->MCU] [seq=34] Heartbeat request
+[15:28:58.352858] [Wifi<--MCU] [seq=34] Heartbeat response, status=0x1
+[15:29:08.345831] [Wifi-->MCU] [seq=35] Heartbeat request
+[15:29:08.348188] [Wifi<--MCU] [seq=35] Heartbeat response, status=0x1
+[15:29:18.346290] [Wifi-->MCU] [seq=36] Heartbeat request
+[15:29:18.353901] [Wifi<--MCU] [seq=36] Heartbeat response, status=0x1
+[15:29:28.347432] [Wifi-->MCU] [seq=37] Heartbeat request
+[15:29:28.359483] [Wifi<--MCU] [seq=37] Heartbeat response, status=0x1
+[15:29:33.398870] [Wifi<--MCU] [seq=07] Status report response
+    dpId 1 (power): boolean = True
+    dpId 2 (display always on): boolean = True
+    dpId 3 (mode): enum = 3
+    dpId 4 (fan speed): enum = 5
+    dpId 5 (beeper): boolean = False
+    dpId 6 (auto-off timer (m)): int32 = 0
+    dpId 7 (unknown): int32 = 0
+    dpId 8 (oscillation): boolean = False
+    dpId 9 (unknown): enum = 0
+    dpId 11 (temperature (F)): int32 = 85
+    dpId 12 (unknown): boolean = False
+[15:29:33.399215] [Wifi-->MCU] [seq=07] Status report request/ack
+[15:29:33.473340] [Wifi<--MCU] [seq=08] DP changed 010104
+[15:29:33.671277] [Wifi-->MCU] [seq=09] Status report request/ack
+[15:29:33.671361] [Wifi<--MCU] [seq=09] Status report response
+    dpId 1 (power): boolean = True
+    dpId 2 (display always on): boolean = True
+    dpId 3 (mode): enum = 3
+    dpId 4 (fan speed): enum = 4
+    dpId 5 (beeper): boolean = False
+    dpId 6 (auto-off timer (m)): int32 = 0
+    dpId 7 (unknown): int32 = 0
+    dpId 8 (oscillation): boolean = False
+    dpId 9 (unknown): enum = 0
+    dpId 11 (temperature (F)): int32 = 85
+    dpId 12 (unknown): boolean = False
+[15:29:33.745613] [Wifi<--MCU] [seq=0a] DP changed 010104
+[15:29:33.913234] [Wifi<--MCU] [seq=0b] Status report response
+    dpId 1 (power): boolean = True
+    dpId 2 (display always on): boolean = True
+    dpId 3 (mode): enum = 3
+    dpId 4 (fan speed): enum = 3
+    dpId 5 (beeper): boolean = False
+    dpId 6 (auto-off timer (m)): int32 = 0
+    dpId 7 (unknown): int32 = 0
+    dpId 8 (oscillation): boolean = False
+    dpId 9 (unknown): enum = 0
+    dpId 11 (temperature (F)): int32 = 85
+    dpId 12 (unknown): boolean = False
+[15:29:33.913611] [Wifi-->MCU] [seq=0b] Status report request/ack
+[15:29:33.997989] [Wifi<--MCU] [seq=0c] DP changed 010104
+[15:29:34.165318] [Wifi-->MCU] [seq=0d] Status report request/ack
+[15:29:34.165542] [Wifi<--MCU] [seq=0d] Status report response
+    dpId 1 (power): boolean = True
+    dpId 2 (display always on): boolean = True
+    dpId 3 (mode): enum = 3
+    dpId 4 (fan speed): enum = 2
+    dpId 5 (beeper): boolean = False
+    dpId 6 (auto-off timer (m)): int32 = 0
+    dpId 7 (unknown): int32 = 0
+    dpId 8 (oscillation): boolean = False
+    dpId 9 (unknown): enum = 0
+    dpId 11 (temperature (F)): int32 = 85
+    dpId 12 (unknown): boolean = False
+[15:29:34.209551] [Wifi<--MCU] [seq=0e] DP changed 010104
+[15:29:38.346354] [Wifi-->MCU] [seq=38] Heartbeat request
+[15:29:38.354745] [Wifi<--MCU] [seq=38] Heartbeat response, status=0x1

@@ -1,0 +1,42 @@
+Settings changed via app, in this case changing mode from sleep (3) to natural (2):
+
+[15:30:16.315177] [Wifi<--MCU] [seq=20] Status report response
+    dpId 1 (power): boolean = True
+    dpId 2 (display always on): boolean = True
+    dpId 3 (mode): enum = 3
+    dpId 4 (fan speed): enum = 2
+    dpId 5 (beeper): boolean = False
+    dpId 6 (auto-off timer (m)): int32 = 0
+    dpId 7 (unknown): int32 = 180
+    dpId 8 (oscillation): boolean = False
+    dpId 9 (unknown): enum = 0
+    dpId 11 (temperature (F)): int32 = 85
+    dpId 12 (unknown): boolean = False
+[15:30:16.315556] [Wifi-->MCU] [seq=20] Status report request/ack
+[15:30:16.369473] [Wifi<--MCU] [seq=21] DP changed 010103
+[15:30:18.348056] [Wifi-->MCU] [seq=3c] Heartbeat request
+[15:30:18.356620] [Wifi<--MCU] [seq=3c] Heartbeat response, status=0x1
+[15:30:28.346080] [Wifi-->MCU] [seq=3d] Heartbeat request
+[15:30:28.353337] [Wifi<--MCU] [seq=3d] Heartbeat response, status=0x1
+[15:30:38.347072] [Wifi-->MCU] [seq=3e] Heartbeat request
+[15:30:38.359050] [Wifi<--MCU] [seq=3e] Heartbeat response, status=0x1
+[15:30:48.347436] [Wifi-->MCU] [seq=3f] Heartbeat request
+[15:30:48.353896] [Wifi<--MCU] [seq=3f] Heartbeat response, status=0x1
+[15:30:58.346618] [Wifi-->MCU] [seq=40] Heartbeat request
+[15:30:58.358509] [Wifi<--MCU] [seq=40] Heartbeat response, status=0x1
+[15:30:58.573802] [Wifi-->MCU] [seq=41] Change DPs:
+    dpId 3 (mode): int32 = 2
+[15:30:58.580346] [Wifi<--MCU] [seq=41] Change DP response
+[15:30:58.597186] [Wifi<--MCU] [seq=22] Status report response
+    dpId 1 (power): boolean = True
+    dpId 2 (display always on): boolean = True
+    dpId 3 (mode): enum = 2
+    dpId 4 (fan speed): enum = 2
+    dpId 5 (beeper): boolean = True
+    dpId 6 (auto-off timer (m)): int32 = 0
+    dpId 7 (unknown): int32 = 180
+    dpId 8 (oscillation): boolean = False
+    dpId 9 (unknown): enum = 0
+    dpId 11 (temperature (F)): int32 = 85
+    dpId 12 (unknown): boolean = False
+[15:30:58.674746] [Wifi-->MCU] [seq=22] Status report request/ack

@@ -1,0 +1,34 @@
+The heartbeat is every 10 seconds, the unsolicited DP status report is every 60 seconds but it seems
+to only happen an auto-shutdown timer has ever been used (maybe timer isn't started until this happens),
+which means to get a regular temperature update we'd have to request it.
+
+
+[15:24:13.800984] [Wifi<--MCU] [seq=04] Status report response
+    dpId 1 (power): boolean = False
+    dpId 2 (display always on): boolean = True
+    dpId 3 (mode): enum = 3
+    dpId 4 (fan speed): enum = 6
+    dpId 5 (beeper): boolean = False
+    dpId 6 (auto-off timer (m)): int32 = 0
+    dpId 7 (unknown): int32 = 0
+    dpId 8 (oscillation): boolean = False
+    dpId 9 (unknown): enum = 0
+    dpId 11 (temperature (F)): int32 = 84
+    dpId 12 (unknown): boolean = False
+[15:24:13.801385] [Wifi-->MCU] [seq=04] Status report request/ack
+[15:24:18.347062] [Wifi-->MCU] [seq=17] Heartbeat request
+[15:24:18.351969] [Wifi<--MCU] [seq=17] Heartbeat response, status=0x1
+[15:24:28.348007] [Wifi-->MCU] [seq=18] Heartbeat request
+[15:24:28.354422] [Wifi<--MCU] [seq=18] Heartbeat response, status=0x1
+[15:24:38.346121] [Wifi-->MCU] [seq=19] Heartbeat request
+[15:24:38.357254] [Wifi<--MCU] [seq=19] Heartbeat response, status=0x1
+[15:24:48.347025] [Wifi-->MCU] [seq=1a] Heartbeat request
+[15:24:48.349979] [Wifi<--MCU] [seq=1a] Heartbeat response, status=0x1
+[15:24:58.345865] [Wifi-->MCU] [seq=1b] Heartbeat request
+[15:24:58.351540] [Wifi<--MCU] [seq=1b] Heartbeat response, status=0x1
+[15:25:08.346556] [Wifi-->MCU] [seq=1c] Heartbeat request
+[15:25:08.353974] [Wifi<--MCU] [seq=1c] Heartbeat response, status=0x1
+[15:25:18.346304] [Wifi-->MCU] [seq=1d] Heartbeat request
+[15:25:18.355197] [Wifi<--MCU] [seq=1d] Heartbeat response, status=0x1
+[15:25:28.346971] [Wifi-->MCU] [seq=1e] Heartbeat request
+[15:25:28.357383] [Wifi<--MCU] [seq=1e] Heartbeat response, status=0x1

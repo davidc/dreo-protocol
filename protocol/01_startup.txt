@@ -1,0 +1,149 @@
+
+
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x3c looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x03 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x01 looking for header
+[Wifi<--MCU] skip byte 0x03 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x04 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x01 looking for header
+[Wifi<--MCU] skip byte 0x03 looking for header
+[Wifi<--MCU] skip byte 0x04 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x04 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x01 looking for header
+[Wifi<--MCU] skip byte 0x06 looking for header
+[Wifi<--MCU] skip byte 0x05 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x01 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x01 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x06 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x02 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x04 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x07 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x02 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x04 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x08 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x01 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x01 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x09 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x04 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x01 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x0b looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x02 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x04 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x0c looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x01 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0x01 looking for header
+[Wifi<--MCU] skip byte 0x00 looking for header
+[Wifi<--MCU] skip byte 0xca looking for header
+[15:22:37.623475] [Wifi<--MCU] [seq=01] Status report response
+    dpId 1 (power): boolean = False
+    dpId 2 (display always on): boolean = True
+    dpId 3 (mode): enum = 3
+    dpId 4 (fan speed): enum = 6
+    dpId 5 (beeper): boolean = False
+    dpId 6 (auto-off timer (m)): int32 = 0
+    dpId 7 (unknown): int32 = 0
+    dpId 8 (oscillation): boolean = False
+    dpId 9 (unknown): enum = 0
+    dpId 11 (temperature (F)): int32 = 85
+    dpId 12 (unknown): boolean = False
+[Wifi-->MCU] skip byte 0x00 looking for header
+[Wifi-->MCU] skip byte 0x7c looking for header
+[Wifi-->MCU] skip byte 0x00 looking for header
+[Wifi-->MCU] skip byte 0x01 looking for header
+[Wifi-->MCU] skip byte 0xff looking for header
+[Wifi-->MCU] skip byte 0x00 looking for header
+[15:22:38.346890] [Wifi-->MCU] [seq=00] Heartbeat request
+[15:22:38.353039] [Wifi<--MCU] [seq=00] Heartbeat response, status=0x0
+[15:22:38.446286] [Wifi-->MCU] [seq=01] Report module status 0000
+[15:22:38.453785] [Wifi<--MCU] [seq=01] Report module status 
+[15:22:38.546161] [Wifi-->MCU] [seq=02] Request MCU info
+[15:22:38.554859] [Wifi<--MCU] [seq=02] Request MCU info response
+    MCU info: 001+SC95F8613B/EU+0.0.8
+[15:22:38.646532] [Wifi-->MCU] [seq=03] Report module status 0100
+[15:22:38.655441] [Wifi<--MCU] [seq=03] Report module status 
+[15:22:38.848647] [Wifi-->MCU] [seq=04] Report module status 0200
+[15:22:38.857188] [Wifi<--MCU] [seq=04] Report module status 
+[15:22:41.006330] [Wifi-->MCU] [seq=05] Report module status 0200
+[15:22:41.015700] [Wifi<--MCU] [seq=05] Report module status 
+[15:22:47.361023] [Wifi-->MCU] [seq=06] Report module status 0200
+[15:22:47.369569] [Wifi<--MCU] [seq=06] Report module status 
+[15:22:49.571654] [Wifi-->MCU] [seq=07] Report module status 0200
+[15:22:49.578048] [Wifi<--MCU] [seq=07] Report module status 
+[15:22:49.675753] [Wifi-->MCU] [seq=08] Request immediate status report
+[15:22:49.685391] [Wifi<--MCU] [seq=08] Status report response
+    dpId 1 (power): boolean = False
+    dpId 2 (display always on): boolean = True
+    dpId 3 (mode): enum = 3
+    dpId 4 (fan speed): enum = 6
+    dpId 5 (beeper): boolean = False
+    dpId 6 (auto-off timer (m)): int32 = 0
+    dpId 7 (unknown): int32 = 0
+    dpId 8 (oscillation): boolean = False
+    dpId 9 (unknown): enum = 0
+    dpId 11 (temperature (F)): int32 = 85
+    dpId 12 (unknown): boolean = False
+[15:22:49.775140] [Wifi-->MCU] [seq=09] Report module status 0200
+[15:22:49.779696] [Wifi<--MCU] [seq=09] Report module status 
+[15:22:49.875150] [Wifi-->MCU] [seq=08] Status report request/ack
+[15:22:50.079165] [Wifi-->MCU] [seq=0a] Report module status 0300
+[15:22:50.082273] [Wifi<--MCU] [seq=0a] Report module status 
+[15:22:54.879890] [Wifi-->MCU] [seq=0b] Heartbeat request
+[15:22:54.882850] [Wifi<--MCU] [seq=0b] Heartbeat response, status=0x1
+[15:22:55.020766] [Wifi-->MCU] [seq=0c] Request MCU info
+[15:22:55.023975] [Wifi<--MCU] [seq=0c] Request MCU info response
+    MCU info: 001+SC95F8613B/EU+0.0.8
+[15:22:55.243411] [Wifi-->MCU] [seq=0d] Request immediate status report
+[15:22:55.252302] [Wifi<--MCU] [seq=0d] Status report response
+    dpId 1 (power): boolean = False
+    dpId 2 (display always on): boolean = True
+    dpId 3 (mode): enum = 3
+    dpId 4 (fan speed): enum = 6
+    dpId 5 (beeper): boolean = False
+    dpId 6 (auto-off timer (m)): int32 = 0
+    dpId 7 (unknown): int32 = 0
+    dpId 8 (oscillation): boolean = False
+    dpId 9 (unknown): enum = 0
+    dpId 11 (temperature (F)): int32 = 85
+    dpId 12 (unknown): boolean = False
+[15:22:55.343658] [Wifi-->MCU] [seq=0e] Report module status 0500
+[15:22:55.346500] [Wifi<--MCU] [seq=0e] Report module status 
+[15:22:55.443545] [Wifi-->MCU] [seq=0d] Status report request/ack
+[15:22:58.365044] [Wifi-->MCU] [seq=0f] Heartbeat request
+[15:22:58.372503] [Wifi<--MCU] [seq=0f] Heartbeat response, status=0x1
