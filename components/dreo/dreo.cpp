@@ -49,21 +49,12 @@ void Dreo::dump_config() {
     return;
   }
   for (auto &info : this->datapoints_) {
-    // if (info.type == DreoDatapointType::RAW) {
-    //   char hex_buf[format_hex_pretty_size(MAX_DATAPOINT_LOG_BYTES)];
-    //   ESP_LOGCONFIG(TAG, "  Datapoint %u: raw (value: %s)", info.id,
-    //                 format_hex_pretty_to(hex_buf, info.value_raw.data(), info.value_raw.size()));
-    // } else 
     if (info.type == DreoDatapointType::BOOLEAN) {
-      ESP_LOGCONFIG(TAG, "  Datapoint %u: switch (value: %s)", info.id, ONOFF(info.value_bool));
+      ESP_LOGCONFIG(TAG, "  Datapoint %u: boolean (value: %s)", info.id, ONOFF(info.value_bool));
     } else if (info.type == DreoDatapointType::INTEGER) {
       ESP_LOGCONFIG(TAG, "  Datapoint %u: int value (value: %d)", info.id, info.value_int);
-    // } else if (info.type == DreoDatapointType::STRING) {
-      // ESP_LOGCONFIG(TAG, "  Datapoint %u: string value (value: %s)", info.id, info.value_string.c_str());
     } else if (info.type == DreoDatapointType::ENUM) {
       ESP_LOGCONFIG(TAG, "  Datapoint %u: enum (value: %d)", info.id, info.value_enum);
-    // } else if (info.type == DreoDatapointType::BITMASK) {
-      // ESP_LOGCONFIG(TAG, "  Datapoint %u: bitmask (value: %" PRIx32 ")", info.id, info.value_bitmask);
     } else {
       ESP_LOGCONFIG(TAG, "  Datapoint %u: unknown", info.id);
     }
@@ -186,8 +177,6 @@ void Dreo::handle_command_(uint8_t command, uint8_t version, uint8_t sequence, c
         this->product_ = R"({"p":"INVALID"})";
       }
       if (this->init_state_ == DreoInitState::INIT_PRODUCT) {
-        // this->init_state_ = DreoInitState::INIT_CONF;
-        // this->send_empty_command_(DreoCommandType::CONF_QUERY);
         this->send_empty_command_(DreoCommandType::DATAPOINT_QUERY);
         this->init_state_ = DreoInitState::INIT_DATAPOINT;
       }
@@ -196,7 +185,6 @@ void Dreo::handle_command_(uint8_t command, uint8_t version, uint8_t sequence, c
     case DreoCommandType::DATAPOINT_DELIVER:
       break;
     case DreoCommandType::DATAPOINT_REPORT:
-      // # TODO ack it
       if (this->init_state_ == DreoInitState::INIT_DATAPOINT) {
         this->init_state_ = DreoInitState::INIT_DONE;
         this->set_timeout("datapoint_dump", 1000, [this] { this->dump_config(); });
@@ -304,7 +292,6 @@ void Dreo::handle_datapoints_(const uint8_t *buffer, size_t len) {
 }
 
 void Dreo::send_raw_command_(DreoCommand command) {
-  // TODO: Adjust Dreo command framing if its serial protocol differs from the existing Tuya wire format.
   uint8_t len_hi = (uint8_t) (command.payload.size() >> 8);
   uint8_t len_lo = (uint8_t) (command.payload.size() & 0xFF);
   uint8_t version = 0;
@@ -450,7 +437,6 @@ void Dreo::set_numeric_datapoint_value_(uint8_t datapoint_id, DreoDatapointType 
 }
 
 void Dreo::send_datapoint_command_(uint8_t datapoint_id, DreoDatapointType datapoint_type, std::vector<uint8_t> data) {
-  // TODO: Verify Dreo datapoint payload encoding and field ordering for the new serial protocol.
   std::vector<uint8_t> buffer;
   buffer.push_back(datapoint_id);
   buffer.push_back(0);  // Unknown (always 0)

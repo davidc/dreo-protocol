@@ -29,10 +29,7 @@ struct DreoDatapoint {
     int value_int;
     uint32_t value_uint;
     uint8_t value_enum;
-    uint32_t value_bitmask;
   };
-  // std::string value_string;
-  // std::vector<uint8_t> value_raw;
 };
 
 struct DreoDatapointListener {
