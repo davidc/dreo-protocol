@@ -1,14 +1,22 @@
 esphome:
-  name: dreo-htf018s
-  friendly_name: "Dreo HTF018S"
+  name: dreo-htf018s-mbl01
+  friendly_name: "Dreo HTF018S MBL01"
+  platformio_options:
+    #board_build.bkcrypt_coeffs: "123456782FAA55AA3AEE63DD4FEEAA00" does not really matter
+    board_build.bkcrypt_coeffs: "00000000000000000000000000000000"
+    board_build.bkota.key: "0123456789ABCDEF0123456789ABCDEF"
+    board_build.bkota.iv: "0123456789ABCDEF"
+    board_flash.calibration: "0x1E0000+0x1000"
+    board_flash.download: "0x132000+0xAE000"
 
 external_components:
   - source: github://davidc/dreo-protocol
 
-esp32:
-  variant: esp32c3
+bk72xx:
+  board: generic-bk7231n-qfn32-tuya
   framework:
-    type: esp-idf
+    version: latest
+    # loglevel: debug # Turn this off if you don't need it
 
 # Logging
 logger:
@@ -37,8 +45,8 @@ captive_portal:
 
 # Enable UART
 uart:
-  tx_pin: GPIO21
-  rx_pin: GPIO20
+  tx_pin: TX1
+  rx_pin: RX1
   baud_rate: 115200
   # debug:
 
@@ -111,3 +119,5 @@ fan:
     speed_datapoint: 4
     speed_count: 9
     oscillation_datapoint: 8
+
+
