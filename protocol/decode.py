@@ -9,7 +9,6 @@ from typing import Optional
 
 import serial
 
-
 HEADER = struct.Struct(">2sBBBBH")
 #                 2s 55AA
 #                    B  version
@@ -190,7 +189,6 @@ def decode_packet(label: str, packet: bytes):
     if hdr.r1 != 0:
         print(f"WARNING: r1 is {hdr.r1:02x}")
 
-    print(f"header size {HEADER.size}")
     packet_checksum = packet[HEADER.size + hdr.length]
     calculated_checksum = sum(packet[0 : HEADER.size + hdr.length]) & 0xFF
 
@@ -263,6 +261,25 @@ def decode_datastream(label: str, data: bytes):
 #         "55AA00CC0700004B01000100010102000100010003000400010204000400010205000100010106000200040000000007000200040000007F0800010001000900040001000B00020004000000520C00010001006355AA00CD0E000003010104E3"
 #     )
 # )
+
+# # HTF-024S from https://github.com/ouaibe/dreo-cloudcutter/issues/14
+# packets = [
+#     "55 aa 00 01 01 00 00 17 30 30 31 2b 53 43 39 35 46 38 36 31 33 42 2f 55 53 2b 30 2e 32 2e 32 24",
+#     "55 aa 00 00 07 00 00 54 01 00 01 00 01 00 02 00 01 00 01 00 03 00 02 00 01 01 04 00 02 00 01 06 05 00 01 00 01 01 06 00 02 00 04 00 00 00 00 07 00 02 00 04 00 00 00 00 08 00 01 00 01 00 09 00 02 00 01 00 0b 00 02 00 04 00 00 00 52 0c 00 01 00 01 00 0d 00 02 00 04 00 00 00 00 30",
+#     "55 aa 00 03 03 00 00 00 05",
+#     "55 aa 00 04 03 00 00 00 06",
+#     "55 aa 00 05 03 00 00 00 07",
+#     "55 aa 00 06 03 00 00 00 08",
+#     "55 aa 00 07 00 00 00 01 00 07",
+#     "55 aa 00 08 03 00 00 00 0a",
+#     "55 aa 00 09 03 00 00 00 0b",
+#     "55 aa 00 0a 03 00 00 00 0c",
+# ]
+
+# for packet in packets:
+#     decode_datastream("", bytes.fromhex(packet))
+
+# exit(0)
 
 class SerialPort:
     device: str
