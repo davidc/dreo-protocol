@@ -5,6 +5,7 @@ from pprint import pprint
 
 from dataclasses import dataclass
 import struct
+from typing import Optional
 
 import serial
 
@@ -178,7 +179,7 @@ def decode_packet(label: str, packet: bytes):
     if len(body) < hdr.length:
         raise IncompletePacketException()
 
-    # print("Packet: " + packet[0 : HEADER.size + hdr.length + 1].hex())
+    print("Packet: " + packet[0 : HEADER.size + hdr.length + 1].hex())
 
     time = datetime.now().strftime("%H:%M:%S.%f")
     print(f"[{time}] [{label}] [seq={hdr.sequence:02x}] ", end="")
@@ -189,6 +190,7 @@ def decode_packet(label: str, packet: bytes):
     if hdr.r1 != 0:
         print(f"WARNING: r1 is {hdr.r1:02x}")
 
+    print(f"header size {HEADER.size}")
     packet_checksum = packet[HEADER.size + hdr.length]
     calculated_checksum = sum(packet[0 : HEADER.size + hdr.length]) & 0xFF
 
@@ -262,24 +264,31 @@ def decode_datastream(label: str, data: bytes):
 #     )
 # )
 
+class SerialPort:
+    device: str
+    label: str
+    serial: Optional[serial.Serial]
+    buffer: Optional[bytes]
 
-ser1 = serial.Serial("/dev/ttyUSB0", 115200, timeout=0)
-ser2 = serial.Serial("/dev/ttyUSB1", 115200, timeout=0)
-# ser1.open()
-# ser2.open()
+    def __init__(self, device: str, label: str):
+        self.device = device
+        self.label = label
 
-buf1 = bytes()
-buf2 = bytes()
+
+ports = []
+
+ports.append(SerialPort("/dev/ttyUSB0", "Wifi-->MCU"))
+ports.append(SerialPort("/dev/ttyUSB1", "Wifi<--MCU"))
+
+for port in ports:
+    port.serial = serial.Serial(port.device, 115200, timeout=0)
+    # port.serial.open()
+    port.buffer = bytes()
 
 while True:
-    read_ser1 = ser1.read(ser1.in_waiting or 1)
-    if read_ser1:
-        buf1 += read_ser1
-        if len(buf1) > HEADER.size:
-            buf1 = decode_datastream("Wifi-->MCU", buf1)
-
-    read_ser2 = ser2.read(ser2.in_waiting or 1)
-    if read_ser2:
-        buf2 += read_ser2
-        if len(buf2) > HEADER.size:
-            buf2 = decode_datastream("Wifi<--MCU", buf2)
+    for port in ports:
+        read = port.serial.read(port.serial.in_waiting or 1)
+        if read:
+            port.buffer += read
+            if len(port.buffer) > HEADER.size:
+                port.buffer = decode_datastream(port.label, port.buffer)
