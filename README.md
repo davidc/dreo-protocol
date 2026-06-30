@@ -24,7 +24,7 @@ although I haven't tested the fan functionality - although that should be fine
 | DR-HTF004S | Tower | MBL02   | | Uses a different protocol, will not work. See [dreo-cloudcutter](https://github.com/ouaibe/dreo-cloudcutter) instead. |
 | DR-HTF018S | Tower | MBL01 (original) | [example-dreo-htf018s-mbl01.yaml](example-dreo-htf018s-mbl01.yaml) | Tested ESPhome installs okay, not tested fan functionality. Reports welcome. |
 | DR-HTF018S | Tower | ESP32C3 | [example-dreo-htf018s-esp32c3.yaml](example-dreo-htf018s-esp32c3.yaml) | Tested, works perfectly. |
-| DR-HTF024S | Tower | MBL01 (original) | [example-dreo-htf024s-esp32c3.yaml](example-dreo-htf024s-esp32c3.yaml) | Untested but [may work](https://github.com/davidc/dreo-protocol/issues/1). |
+| DR-HTF024S | Tower | MBL01 (original) | [example-dreo-htf024s-mbl01.yaml](example-dreo-htf024s-mbl01.yaml) | Untested but [may work](https://github.com/davidc/dreo-protocol/issues/1). |
 
 Please report back successes or failures. Please be careful and always ensure you have a way to restore the original firmware
 if needed (e.g. UART), I accept no responsibility for bricked devices!
