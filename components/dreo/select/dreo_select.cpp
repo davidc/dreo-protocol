@@ -7,7 +7,7 @@ static const char *const TAG = "dreo.select";
 
 void DreoSelect::setup() {
   this->parent_->register_listener(this->select_id_, [this](const DreoDatapoint &datapoint) {
-    uint8_t enum_value = datapoint.value_enum;
+    uint8_t enum_value = datapoint.type == DreoDatapointType::INTEGER ? datapoint.value_uint : datapoint.value_enum;
     ESP_LOGV(TAG, "MCU reported select %u value %u", this->select_id_, enum_value);
     auto mappings = this->mappings_;
     auto it = std::find(mappings.cbegin(), mappings.cend(), enum_value);
@@ -47,4 +47,3 @@ void DreoSelect::dump_config() {
 }
 
 }  // namespace esphome::dreo
-

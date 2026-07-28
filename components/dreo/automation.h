@@ -35,6 +35,11 @@ class DreoEnumDatapointUpdateTrigger final : public Trigger<uint8_t> {
   explicit DreoEnumDatapointUpdateTrigger(Dreo *parent, uint8_t sensor_id);
 };
 
+class DreoButtonEventTrigger final : public Trigger<uint8_t> {
+ public:
+  explicit DreoButtonEventTrigger(Dreo *parent) {
+    parent->register_button_listener([this](const DreoButtonEvent &event) { this->trigger(event.code); });
+  }
+};
 
 }  // namespace esphome::dreo
-
