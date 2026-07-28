@@ -16,6 +16,14 @@ into OTA mode (hold the oscillation button for 5 seconds until the countdown end
 and visit http://192.168.0.1 and upload the file. I have tested this allows me to install a functioning ESPhome
 although I haven't tested the fan functionality - although that should be fine 
 
+There is also a Dreo 712S ESP32-C3 example in
+[example-dreo-712s-esp32c3.yaml](example-dreo-712s-esp32c3.yaml), with model
+notes in [docs/dreo-712s/readme.md](docs/dreo-712s/readme.md). Unlike the HTF018S
+config, the 712S keeps the stock ESP32-C3 module and uses the stock-compatible
+[dreo_partitions.csv](docs/dreo-712s/dreo_partitions.csv), so no hardware swap is needed. It
+drives the local GPIO7 RGB strip, and maps the model-specific fan, main CCT
+light, button-event debounce, timers, and diagnostic/probe entities.
+
 ## Tested models
 
 | Model      | Type  | Module  | Config | Status |
@@ -25,6 +33,7 @@ although I haven't tested the fan functionality - although that should be fine
 | DR-HTF018S | Tower | MBL01 (original) | [example-dreo-htf018s-mbl01.yaml](example-dreo-htf018s-mbl01.yaml) | Tested ESPhome installs okay, not tested fan functionality. Reports welcome. |
 | DR-HTF018S | Tower | ESP32C3 | [example-dreo-htf018s-esp32c3.yaml](example-dreo-htf018s-esp32c3.yaml) | Tested, works perfectly. |
 | DR-HTF024S | Tower | MBL01 (original) | [example-dreo-htf024s-mbl01.yaml](example-dreo-htf024s-mbl01.yaml) | Untested but [may work](https://github.com/davidc/dreo-protocol/issues/1). |
+| 712S | Ceiling | ESP32-C3 (stock) | [example-dreo-712s-esp32c3.yaml](example-dreo-712s-esp32c3.yaml) | Tested on one unit, works. Datapoint map differs from the HTF models - see [docs/dreo-712s/readme.md](docs/dreo-712s/readme.md). |
 
 Please report back successes or failures. Please be careful and always ensure you have a way to restore the original firmware
 if needed (e.g. UART), I accept no responsibility for bricked devices!

@@ -1,0 +1,1014 @@
+substitutions:
+  log_level: INFO
+  esp_idf_log_level: "3"
+  debug_entities_internal: "true"
+
+esphome:
+  name: dreo-712s
+  friendly_name: Dreo 712S
+
+external_components:
+  - source: github://davidc/dreo-protocol
+
+esp32:
+  board: esp32-c3-devkitm-1
+  variant: esp32c3
+  framework:
+    type: esp-idf
+    sdkconfig_options:
+      CONFIG_LOG_DEFAULT_LEVEL: ${esp_idf_log_level}
+  partitions: docs/dreo-712s/dreo_partitions.csv
+
+logger:
+  level: ${log_level}
+  baud_rate: 0
+
+api:
+
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  # Open fallback hotspot named "<friendly_name> Fallback Hotspot", reachable via
+  # captive_portal below. reboot_timeout: 0s stops the reboot loop when no
+  # station is configured yet, so the hotspot stays up for provisioning.
+  ap:
+  reboot_timeout: 0s
+
+# web_server:
+#   port: 80
+#   local: true
+
+captive_portal:
+
+uart:
+  id: mcu_uart
+  tx_pin: GPIO0
+  rx_pin: GPIO1
+  baud_rate: 115200
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+  rx_buffer_size: 512
+
+dreo:
+  id: dreo_hub
+  uart_id: mcu_uart
+  startup_heartbeat_interval: 300ms
+  max_init_retries: 50
+  # The 0x09 version query is an optional info helper, NOT a handshake gate: this
+  # unit's MCU never replies to it, so blocking sync on it (true) stalls init at
+  # INIT_VERSION forever. The stock/original firmware treats the first valid MCU
+  # frame as "synced" and fires 0x09 fire-and-forget afterwards. Keep it false.
+  query_version_on_sync: false
+  wifi_status_on_sync: true
+  periodic_wifi_status: false
+  # STOCK LOAD MODEL (from the stock app CBOR thing-model + live probing):
+  # DP1 = poweron (master), DP3 = fanon, DP4 = lighton. The load flags are
+  # INDEPENDENT writable booleans - fan and light can run together. Writing a
+  # load flag is all the stock app does ({fanon:true} => one DP3 write); the MCU
+  # raises/drops master DP1 itself as loads come and go. Display state is
+  # light = DP4 && DP1, fan = DP3 && DP1, from reliable MCU 0x07 reports (no
+  # dependency on the intermittently-dropped 0x0e button event). The routing
+  # interval publishes these to virtual DPs 210 (light) / 211 (fan) that the
+  # entities bind to; those are local-only and never sent to the MCU.
+  local_datapoints: [210, 211]
+  on_button_event:
+    - then:
+        - lambda: |-
+            // Remote off-presses sometimes arrive as this 0x0e button event with
+            // NO fresh DP report, leaving the cache stale. Re-query state on any
+            // button so the cache observes the transition promptly.
+            id(dreo_hub).request_state();
+            // Ambient RGB remote button: short press = 0x12 (cycles preset, MCU
+            // drives DP5). Long hold = 0x14, which the MCU does NOT act on - the
+            // ESP is expected to turn RGB off (stock behaviour). Setting DP5=off
+            // lets the 500ms RGB interval switch the ESP LED strip off.
+            if (x == 0x14) {
+              id(rgb_manual_mode) = false;
+              id(dreo_hub).set_boolean_datapoint_value(5, false);
+            }
+
+fan:
+  - platform: dreo
+    id: main_fan
+    name: Fan
+    restore_mode: ALWAYS_OFF
+    # Display bound to virtual DP211 (published by the routing interval as
+    # DP3 && DP1). HA on/off writes the real DP3 to control it.
+    switch_datapoint: 211
+    speed_datapoint: 7
+    speed_datapoint_type: int
+    speed_count: 6
+    speed_mappings: [1, 3, 5, 7, 9, 12]
+    direction_datapoint: 6
+    direction_datapoint_type: int
+    direction_forward_value: 1
+    direction_reverse_value: 4
+    # Outbound control, stock-style: ONE write to the fan's own load flag (DP3),
+    # exactly like the stock app's {fanon:true/false}. The MCU manages master
+    # DP1 and the light itself - never write those here (a DP1=0 "off" would
+    # also kill the light, and bursts of writes 10ms apart get dropped by the
+    # MCU, which rate-limits at ~100ms). disp_fan is the last routing-published
+    # state: if it already matches, this on_turn came from routing/remote - not
+    # a user action - and we do nothing.
+    on_turn_on:
+      - lambda: |-
+          if (id(disp_fan)) return;              // already on / routing-driven
+          id(pend_clear_d3) = false;
+          // force_: the cached DP3 may already read 1 (stale latch being
+          // suppressed) - a change-gated set would send nothing.
+          id(dreo_hub).force_set_boolean_datapoint_value(3, true);   // fanon
+          // Hold the display at the commanded state and keep routing quiet
+          // until the MCU confirms (see fan_cmd_until_ms global).
+          id(disp_fan) = true;
+          id(fan_cmd_until_ms) = millis() + 1500;
+    on_turn_off:
+      - lambda: |-
+          if (!id(disp_fan)) return;             // already off / routing-driven
+          id(pend_clear_d3) = false;
+          id(dreo_hub).force_set_boolean_datapoint_value(3, false);  // fanon off
+          // The MCU takes ~1s to spin down and report DP3=0 - hold the display
+          // off so routing doesn't snap the HA toggle back ON meanwhile.
+          id(disp_fan) = false;
+          id(fan_cmd_until_ms) = millis() + 1500;
+
+light:
+  - platform: dreo
+    id: main_light
+    name: Light
+    # Display bound to virtual DP210 (published by the routing interval as
+    # DP4 && DP1 - the stock light_on). HA on/off writes the real DP4 to control
+    # it. Brightness (DP8) and colour (DP9) are honest and controlled directly.
+    switch_datapoint: 210
+    brightness_datapoint: 8
+    color_temperature_datapoint: 9
+    max_value: 100
+    cold_white_color_temperature: 153 mireds
+    warm_white_color_temperature: 500 mireds
+    restore_mode: ALWAYS_OFF
+    default_transition_length: 0s
+    # Outbound control, stock-style: ONE write to the light's own load flag
+    # (DP4), like the stock app's {lighton:true/false}. See the Fan handlers
+    # for the full rationale. disp_light is the last routing-published state;
+    # if it already matches, this on_turn came from routing/remote - skip.
+    on_turn_on:
+      - lambda: |-
+          if (id(disp_light)) return;            // already on / routing-driven
+          id(pend_clear_d4) = false;
+          // force_: the cached DP4 may already read 1 (stale latch being
+          // suppressed) - a change-gated set would send nothing.
+          id(dreo_hub).force_set_boolean_datapoint_value(4, true);   // lighton
+          // Hold the display at the commanded state and keep routing quiet
+          // until the MCU confirms (see light_cmd_until_ms global).
+          id(disp_light) = true;
+          id(light_cmd_until_ms) = millis() + 1500;
+    on_turn_off:
+      - lambda: |-
+          if (!id(disp_light)) return;           // already off / routing-driven
+          id(pend_clear_d4) = false;
+          id(dreo_hub).force_set_boolean_datapoint_value(4, false);  // lighton off
+          // Hold the display off until the MCU reports DP4=0 so routing
+          // doesn't snap the HA toggle back ON meanwhile.
+          id(disp_light) = false;
+          id(light_cmd_until_ms) = millis() + 1500;
+
+  - platform: esp32_rmt_led_strip
+    id: ambient_rgb_strip
+    name: RGB Colour
+    pin: GPIO7
+    num_leds: 17
+    chipset: WS2812
+    rgb_order: RGB
+    restore_mode: ALWAYS_OFF
+    default_transition_length: 0s
+    on_state:
+      - lambda: |-
+          if ((int32_t) (millis() - id(rgb_dp_sync_until_ms)) < 0)
+            return;
+
+          id(rgb_manual_mode) = true;
+          bool desired_on = id(ambient_rgb_strip).remote_values.is_on();
+          auto current_on = id(dreo_hub).bool_state(5);
+          if (!current_on.has_value() || current_on.value() != desired_on)
+            id(dreo_hub).set_boolean_datapoint_value(5, desired_on);
+          if (!desired_on)
+            return;
+
+          float red = 0.0f;
+          float green = 0.0f;
+          float blue = 0.0f;
+          id(ambient_rgb_strip).remote_values.as_rgb(&red, &green, &blue);
+          float level = red;
+          if (green > level)
+            level = green;
+          if (blue > level)
+            level = blue;
+          int brightness = (int) (level * 100.0f + 0.5f);
+          if (brightness < 1)
+            brightness = 1;
+          if (brightness > 100)
+            brightness = 100;
+
+          // ESP owns ambient brightness (no DP27 mirror write to the MCU).
+          id(atm_brightness) = brightness;
+    effects:
+      - addressable_rainbow:
+          name: RGB Rainbow
+          speed: 10
+          width: 17
+      - addressable_color_wipe:
+          name: RGB Color Wipe
+          add_led_interval: 80ms
+          colors:
+            - red: 100%
+              green: 0%
+              blue: 0%
+              num_leds: 17
+            - red: 0%
+              green: 100%
+              blue: 0%
+              num_leds: 17
+            - red: 0%
+              green: 0%
+              blue: 100%
+              num_leds: 17
+      - addressable_scan:
+          name: RGB Scan
+          move_interval: 80ms
+          scan_width: 3
+
+globals:
+  - id: probe_dp
+    type: int
+    restore_value: false
+    initial_value: "2"
+  - id: probe_val
+    type: int
+    restore_value: false
+    initial_value: "1"
+  - id: rgb_dp_sync_until_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+  - id: rgb_manual_mode
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  # Ambient brightness store. The stock MCU never reports DP27 (confirmed from
+  # captures: state reports jump DP26 -> DP28), so ambient brightness is owned
+  # locally by the ESP rather than mirrored to a datapoint the MCU ignores.
+  - id: atm_brightness
+    type: int
+    restore_value: true
+    initial_value: "63"
+  # Last display value the routing interval published to the light/fan entities
+  # (i.e. the real physical state: light = DP4 && DP1, fan = DP3 && DP1). The
+  # on_turn handlers compare against these to tell a genuine HA command apart
+  # from a routing/remote-driven display update, so only real commands write DPs.
+  # Set BEFORE each publish so the value is correct whenever on_turn fires
+  # (whether synchronously or deferred to the next loop).
+  - id: disp_light
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: disp_fan
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  # Previous-tick raw DP values + seed flag for the routing interval's
+  # rise-edge detection (stale-latch ghost cleanup, see the interval).
+  - id: routing_seeded
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: prev_p1
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: prev_d3
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: prev_d4
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  # A load flag was identified as a stale latch (see routing interval); keep
+  # writing it low (and suppress its display) until the MCU reports it cleared.
+  - id: pend_clear_d3
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  - id: pend_clear_d4
+    type: bool
+    restore_value: false
+    initial_value: "false"
+  # Grace windows after a user-initiated on/off command: the MCU can take ~1s
+  # to apply and report a fan stop, so routing must not re-assert the stale
+  # flag in the meantime (the HA toggle would visibly snap back). While the
+  # window is open, disp_* holds the commanded value and routing stays quiet
+  # for that entity; expiry restores MCU-truth so a dropped write self-heals.
+  - id: light_cmd_until_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+  - id: fan_cmd_until_ms
+    type: uint32_t
+    restore_value: false
+    initial_value: "0"
+
+interval:
+  # Display routing: derive the honest per-load state from the MCU's reports
+  # (light = DP4 && DP1, fan = DP3 && DP1) and publish it to the local virtual
+  # DPs the entities bind to. Read-only - control writes happen in the fan and
+  # light on_turn handlers.
+  - interval: 250ms
+    then:
+      - lambda: |-
+          auto d1 = id(dreo_hub).bool_state(1);   // master power (poweron)
+          auto d3 = id(dreo_hub).bool_state(3);   // fanon load flag
+          auto d4 = id(dreo_hub).bool_state(4);   // lighton load flag
+          bool p1 = d1.has_value() && d1.value();
+          bool f3 = d3.has_value() && d3.value();
+          bool l4 = d4.has_value() && d4.value();
+
+          // Stale-latch ghost cleanup. A remote off-press drops master DP1 but
+          // leaves the load's flag latched at 1. If the OTHER load then powers
+          // DP1 back up, the latched flag reads as on (flag && DP1) even though
+          // the MCU does not physically run a stale-latched load. Signature:
+          // DP1 rose together with exactly one flag, while the other flag was
+          // already high and displayed off -> that flag is stale; clear it in
+          // the MCU (retrying each tick until the report confirms) and suppress
+          // its display meanwhile. A flag that rose itself was commanded - keep.
+          if (!id(routing_seeded)) {
+            if (d1.has_value() || d3.has_value() || d4.has_value()) {
+              id(prev_p1) = p1;
+              id(prev_d3) = f3;
+              id(prev_d4) = l4;
+              id(routing_seeded) = true;
+            }
+          } else {
+            bool p1_rose = p1 && !id(prev_p1);
+            bool f3_rose = f3 && !id(prev_d3);
+            bool l4_rose = l4 && !id(prev_d4);
+            if (p1_rose && f3_rose && !l4_rose && l4 && !id(disp_light))
+              id(pend_clear_d4) = true;
+            if (p1_rose && l4_rose && !f3_rose && f3 && !id(disp_fan))
+              id(pend_clear_d3) = true;
+            id(prev_p1) = p1;
+            id(prev_d3) = f3;
+            id(prev_d4) = l4;
+          }
+          // At most one MCU write per tick (the MCU rate-limits at ~100ms and
+          // drops bursts).
+          bool wrote = false;
+          // Master-off latch normalization: with the master off, any load flag
+          // still latched 1 is invisible latent state - the MCU won't run the
+          // load, but a later power-up by the OTHER load would make it read as
+          // on (ghost). Clear latches whenever the master is off so power-ups
+          // always start clean, whatever caused the power-down and whenever
+          // its report arrives.
+          if (!p1) {
+            if (l4) {
+              id(dreo_hub).set_boolean_datapoint_value(4, false);
+              wrote = true;
+            } else if (f3) {
+              id(dreo_hub).set_boolean_datapoint_value(3, false);
+              wrote = true;
+            }
+          }
+          if (id(pend_clear_d4)) {
+            if (!l4) {
+              id(pend_clear_d4) = false;
+            } else if (!wrote) {
+              id(dreo_hub).set_boolean_datapoint_value(4, false);
+              wrote = true;
+            }
+          }
+          if (id(pend_clear_d3)) {
+            if (!f3) {
+              id(pend_clear_d3) = false;
+            } else if (!wrote) {
+              id(dreo_hub).set_boolean_datapoint_value(3, false);
+              wrote = true;
+            }
+          }
+
+          // Stock model: independent load flags gated by master power.
+          // light = DP4 && DP1, fan = DP3 && DP1. Both from reliable MCU
+          // reports - no dependency on the intermittent button event.
+          bool light_val = l4 && p1 && !id(pend_clear_d4);
+          bool fan_val = f3 && p1 && !id(pend_clear_d3);
+          // A user command is in flight (grace window): the MCU flag is stale
+          // until it applies and reports (~1s for a fan stop), so don't
+          // re-assert it - disp_* keeps the commanded value set by the handler.
+          // On expiry MCU-truth resumes, so a dropped write self-heals.
+          bool light_grace = (int32_t) (millis() - id(light_cmd_until_ms)) < 0;
+          bool fan_grace = (int32_t) (millis() - id(fan_cmd_until_ms)) < 0;
+          // Record the display value BEFORE publishing so the light/fan on_turn
+          // guards see the correct physical state and don't fire a command back.
+          // Publish only when the cached virtual DP disagrees. The cache also
+          // catches optimistic write_state sets the MCU never confirmed, so a
+          // wrong optimistic value still gets corrected within one tick -
+          // without re-firing entity listeners 4x/sec when nothing changed.
+          if (!light_grace) {
+            id(disp_light) = light_val;
+            auto c210 = id(dreo_hub).bool_state(210);
+            if (!c210.has_value() || c210.value() != light_val)
+              id(dreo_hub).publish_boolean_datapoint_value(210, light_val);  // light
+          }
+          if (!fan_grace) {
+            id(disp_fan) = fan_val;
+            auto c211 = id(dreo_hub).bool_state(211);
+            if (!c211.has_value() || c211.value() != fan_val)
+              id(dreo_hub).publish_boolean_datapoint_value(211, fan_val);    // fan
+          }
+
+  - interval: 500ms
+    then:
+      - lambda: |-
+          auto on = id(dreo_hub).bool_state(5);
+          if (!on.has_value())
+            return;
+
+          auto preset_state = id(dreo_hub).number_state(25);
+          int preset = preset_state.has_value() ? (int) preset_state.value() : 0;
+          if (preset < 0)
+            preset = 0;
+          if (preset > 4)
+            preset = 4;
+
+          int brightness = id(atm_brightness);
+          if (brightness < 0)
+            brightness = 0;
+          if (brightness > 100)
+            brightness = 100;
+
+          static bool have_last = false;
+          static bool last_on = false;
+          static int last_preset = -1;
+          static int last_brightness = -1;
+          bool next_on = on.value() && brightness > 0;
+          bool on_changed = have_last && next_on != last_on;
+          bool preset_changed = have_last && preset != last_preset;
+          bool brightness_changed = have_last && brightness != last_brightness;
+
+          if (id(rgb_manual_mode) && !preset_changed) {
+            if (!have_last || on_changed || brightness_changed) {
+              id(rgb_dp_sync_until_ms) = millis() + 750;
+              if (!next_on) {
+                auto call = id(ambient_rgb_strip).turn_off();
+                call.set_transition_length(0);
+                call.perform();
+              } else {
+                auto call = id(ambient_rgb_strip).turn_on();
+                call.set_transition_length(0);
+                call.set_brightness(brightness / 100.0f);
+                call.perform();
+              }
+            }
+            have_last = true;
+            last_on = next_on;
+            last_preset = preset;
+            last_brightness = brightness;
+            return;
+          }
+
+          if (id(rgb_manual_mode) && preset_changed)
+            id(rgb_manual_mode) = false;
+
+          if (have_last && next_on == last_on && preset == last_preset && brightness == last_brightness)
+            return;
+          have_last = true;
+          last_on = next_on;
+          last_preset = preset;
+          last_brightness = brightness;
+
+          id(rgb_dp_sync_until_ms) = millis() + 750;
+          if (!next_on) {
+            auto call = id(ambient_rgb_strip).turn_off();
+            call.set_transition_length(0);
+            call.perform();
+            return;
+          }
+
+          auto call = id(ambient_rgb_strip).turn_on();
+          call.set_transition_length(0);
+          call.set_brightness(brightness / 100.0f);
+          switch (preset) {
+            case 0:
+              call.set_effect("RGB Rainbow");
+              break;
+            case 1:
+              call.set_effect((uint32_t) 0);
+              call.set_rgb(1.0f, 0.0f, 0.0f);
+              break;
+            case 2:
+              call.set_effect((uint32_t) 0);
+              call.set_rgb(0.0f, 1.0f, 0.0f);
+              break;
+            case 3:
+              call.set_effect((uint32_t) 0);
+              call.set_rgb(0.0f, 0.0f, 1.0f);
+              break;
+            default:
+              call.set_effect("RGB Color Wipe");
+              break;
+          }
+          call.perform();
+
+binary_sensor:
+  - platform: template
+    name: MCU Synced
+    entity_category: diagnostic
+    lambda: return id(dreo_hub).initialized();
+
+button:
+  - platform: restart
+    name: Restart ESP
+    entity_category: diagnostic
+
+  - platform: safe_mode
+    name: Restart ESP Safe Mode
+    entity_category: diagnostic
+    disabled_by_default: true
+
+  - platform: factory_reset
+    name: Factory Reset ESP
+    entity_category: config
+    disabled_by_default: true
+
+  - platform: template
+    name: Request MCU State
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    on_press:
+      - lambda: id(dreo_hub).request_state();
+
+  - platform: template
+    name: Query MCU Version
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    on_press:
+      - lambda: id(dreo_hub).query_mcu_version();
+
+  - platform: template
+    name: RGB Stock Next Preset
+    entity_category: config
+    on_press:
+      - lambda: |-
+          id(rgb_manual_mode) = false;
+          int next = 0;
+          auto on = id(dreo_hub).bool_state(5);
+          auto preset = id(dreo_hub).number_state(25);
+          if (on.has_value() && on.value() && preset.has_value())
+            next = (int) preset.value() + 1;
+          if (next > 4) {
+            id(dreo_hub).set_boolean_datapoint_value(5, false);
+            id(dreo_hub).set_integer_datapoint_value(25, 0);
+          } else {
+            id(dreo_hub).set_boolean_datapoint_value(5, true);
+            if (id(atm_brightness) <= 0)
+              id(atm_brightness) = 63;
+            id(dreo_hub).set_integer_datapoint_value(25, next);
+          }
+
+  - platform: template
+    name: Probe Write Bool
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    on_press:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value((uint8_t) id(probe_dp), id(probe_val) != 0);
+
+  - platform: template
+    name: Probe Write Enum8
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    on_press:
+      - lambda: id(dreo_hub).set_enum_datapoint_value((uint8_t) id(probe_dp), (uint8_t) id(probe_val));
+
+  - platform: template
+    name: Probe Write U32
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    on_press:
+      - lambda: id(dreo_hub).set_integer_datapoint_value((uint8_t) id(probe_dp), (uint32_t) id(probe_val));
+
+switch:
+  - platform: template
+    name: Button Beep
+    entity_category: config
+    lambda: |-
+      auto muted = id(dreo_hub).bool_state(19);
+      if (!muted.has_value())
+        return {};
+      return !muted.value();
+    turn_on_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(19, false);
+    turn_off_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(19, true);
+
+  - platform: template
+    name: Power Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    lambda: return id(dreo_hub).bool_state(1);
+    turn_on_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(1, true);
+    turn_off_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(1, false);
+
+  - platform: template
+    name: Fan Enable Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    lambda: return id(dreo_hub).bool_state(3);
+    turn_on_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(3, true);
+    turn_off_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(3, false);
+
+  - platform: template
+    name: Light Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    lambda: return id(dreo_hub).bool_state(4);
+    turn_on_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(4, true);
+    turn_off_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(4, false);
+
+  - platform: template
+    name: Scene Uses Light
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    lambda: return id(dreo_hub).bool_state(14);
+    turn_on_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(14, true);
+    turn_off_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(14, false);
+
+  - platform: template
+    name: Ambient RGB Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    lambda: return id(dreo_hub).bool_state(5);
+    turn_on_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(5, true);
+    turn_off_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(5, false);
+
+  - platform: template
+    name: Schedule Enabled
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    lambda: return id(dreo_hub).bool_state(22);
+    turn_on_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(22, true);
+    turn_off_action:
+      - lambda: id(dreo_hub).set_boolean_datapoint_value(22, false);
+
+number:
+  - platform: template
+    name: Mode Value
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    min_value: 0
+    max_value: 20
+    step: 1
+    lambda: return id(dreo_hub).number_state(6);
+    set_action:
+      - lambda: id(dreo_hub).set_integer_datapoint_value(6, (uint32_t) x);
+
+  - platform: template
+    name: Wind Level Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    mode: box
+    min_value: 1
+    max_value: 12
+    step: 1
+    lambda: return id(dreo_hub).number_state(7);
+    set_action:
+      - lambda: id(dreo_hub).set_integer_datapoint_value(7, (uint32_t) x);
+
+  - platform: template
+    name: Light Brightness Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    unit_of_measurement: "%"
+    mode: slider
+    min_value: 0
+    max_value: 100
+    step: 1
+    lambda: return id(dreo_hub).number_state(8);
+    set_action:
+      - lambda: id(dreo_hub).set_integer_datapoint_value(8, (uint32_t) x);
+
+  - platform: template
+    name: Light Color Temperature Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    min_value: 0
+    max_value: 100
+    step: 1
+    lambda: return id(dreo_hub).number_state(9);
+    set_action:
+      - lambda: id(dreo_hub).set_integer_datapoint_value(9, (uint32_t) x);
+
+  - platform: template
+    name: Scene Mode
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    min_value: 0
+    max_value: 20
+    step: 1
+    lambda: return id(dreo_hub).number_state(15);
+    set_action:
+      - lambda: id(dreo_hub).set_integer_datapoint_value(15, (uint32_t) x);
+
+  - platform: template
+    name: Scene Duration Seconds
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    min_value: 0
+    max_value: 86400
+    step: 1
+    lambda: return id(dreo_hub).number_state(16);
+    set_action:
+      - lambda: id(dreo_hub).set_integer_datapoint_value(16, (uint32_t) x);
+
+  - platform: template
+    name: Scene Min Brightness
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    min_value: 0
+    max_value: 100
+    step: 1
+    lambda: return id(dreo_hub).number_state(17);
+    set_action:
+      - lambda: id(dreo_hub).set_integer_datapoint_value(17, (uint32_t) x);
+
+  - platform: template
+    name: Scene Max Brightness
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    min_value: 0
+    max_value: 100
+    step: 1
+    lambda: return id(dreo_hub).number_state(18);
+    set_action:
+      - lambda: id(dreo_hub).set_integer_datapoint_value(18, (uint32_t) x);
+
+  - platform: template
+    name: Timer On Duration Seconds
+    min_value: 0
+    max_value: 86400
+    step: 1
+    lambda: return id(dreo_hub).number_state(20);
+    set_action:
+      - lambda: id(dreo_hub).set_integer_datapoint_value(20, (uint32_t) x);
+
+  - platform: template
+    name: Timer Off Duration Seconds
+    min_value: 0
+    max_value: 86400
+    step: 1
+    lambda: return id(dreo_hub).number_state(21);
+    set_action:
+      - lambda: id(dreo_hub).set_integer_datapoint_value(21, (uint32_t) x);
+
+  - platform: template
+    name: Ambient RGB Brightness Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    unit_of_measurement: "%"
+    min_value: 0
+    max_value: 100
+    step: 1
+    lambda: return id(atm_brightness);
+    set_action:
+      - lambda: id(atm_brightness) = (int) x;
+
+  - platform: template
+    name: Probe DP ID
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    min_value: 0
+    max_value: 255
+    step: 1
+    lambda: return id(probe_dp);
+    set_action:
+      - lambda: id(probe_dp) = (int) x;
+
+  - platform: template
+    name: Probe DP Value
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    min_value: 0
+    max_value: 1000000
+    step: 1
+    lambda: return id(probe_val);
+    set_action:
+      - lambda: id(probe_val) = (int) x;
+
+select:
+  - platform: template
+    name: RGB Stock Preset
+    entity_category: config
+    internal: true
+    update_interval: 5s
+    options:
+      - "Off"
+      - "Preset 0"
+      - "Preset 1"
+      - "Preset 2"
+      - "Preset 3"
+      - "Preset 4"
+    lambda: |-
+      auto on = id(dreo_hub).bool_state(5);
+      if (on.has_value() && !on.value())
+        return std::string("Off");
+      auto preset = id(dreo_hub).number_state(25);
+      if (!preset.has_value())
+        return {};
+      int value = (int) preset.value();
+      if (value < 0)
+        value = 0;
+      if (value > 4)
+        value = 4;
+      char name[16];
+      snprintf(name, sizeof(name), "Preset %d", value);
+      return std::string(name);
+    set_action:
+      - lambda: |-
+          id(rgb_manual_mode) = false;
+          if (x == "Off") {
+            id(dreo_hub).set_boolean_datapoint_value(5, false);
+            id(dreo_hub).set_integer_datapoint_value(25, 0);
+            return;
+          }
+          id(dreo_hub).set_boolean_datapoint_value(5, true);
+          if (id(atm_brightness) <= 0)
+            id(atm_brightness) = 63;
+          int value = 0;
+          if (x == "Preset 1")
+            value = 1;
+          else if (x == "Preset 2")
+            value = 2;
+          else if (x == "Preset 3")
+            value = 3;
+          else if (x == "Preset 4")
+            value = 4;
+          id(dreo_hub).set_integer_datapoint_value(25, value);
+
+text:
+  - platform: template
+    name: Predefine Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    mode: TEXT
+    max_length: 255
+    lambda: return id(dreo_hub).string_state(28);
+    set_action:
+      - lambda: id(dreo_hub).set_string_datapoint_value(28, x);
+
+  - platform: template
+    name: Scenes Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    mode: TEXT
+    max_length: 255
+    lambda: return id(dreo_hub).string_state(100);
+    set_action:
+      - lambda: id(dreo_hub).set_string_datapoint_value(100, x);
+
+  - platform: template
+    name: Effect Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    mode: TEXT
+    max_length: 255
+    lambda: return id(dreo_hub).string_state(101);
+    set_action:
+      - lambda: id(dreo_hub).set_string_datapoint_value(101, x);
+
+  - platform: template
+    name: Favorite Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    mode: TEXT
+    max_length: 255
+    lambda: return id(dreo_hub).string_state(102);
+    set_action:
+      - lambda: id(dreo_hub).set_string_datapoint_value(102, x);
+
+sensor:
+  - platform: template
+    name: Temperature Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    lambda: return id(dreo_hub).number_state(24);
+    unit_of_measurement: "°F"
+    update_interval: 10s
+
+  - platform: dreo
+    id: current_temperature
+    name: Current Temperature
+    sensor_datapoint: 24
+    device_class: temperature
+    unit_of_measurement: "°C"
+    accuracy_decimals: 1
+    # DP24 is reported by the MCU in °F; convert to °C.
+    filters:
+      - lambda: return (x - 32.0) * 5.0 / 9.0;
+
+  - platform: template
+    name: RGB Preset Raw
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    accuracy_decimals: 0
+    lambda: return id(dreo_hub).number_state(25);
+    update_interval: 5s
+
+  - platform: template
+    name: RGB Preset Count
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    accuracy_decimals: 0
+    lambda: return id(dreo_hub).number_state(26);
+    update_interval: 10s
+
+text_sensor:
+  - platform: template
+    name: Product Info
+    entity_category: diagnostic
+    lambda: return id(dreo_hub).product();
+    update_interval: 10s
+
+  - platform: template
+    name: MCU Version Info
+    entity_category: diagnostic
+    lambda: return id(dreo_hub).mcu_version();
+    update_interval: 10s
+
+  - platform: template
+    name: MCU Firmware Version
+    # Parsed from Product Info: "004+CMS32/GL+2.1.39" -> "2.1.39".
+    lambda: |-
+      std::string p = id(dreo_hub).product();
+      auto last = p.rfind('+');
+      if (last == std::string::npos)
+        return std::string("");
+      return p.substr(last + 1);
+    update_interval: 10s
+
+  - platform: template
+    name: MCU Hardware Model
+    # Parsed from Product Info: "004+CMS32/GL+2.1.39" -> "CMS32/GL".
+    lambda: |-
+      std::string p = id(dreo_hub).product();
+      auto first = p.find('+');
+      auto last = p.rfind('+');
+      if (first == std::string::npos || last == first)
+        return std::string("");
+      return p.substr(first + 1, last - first - 1);
+    update_interval: 10s
+
+  - platform: template
+    name: Last MCU Status
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    lambda: return id(dreo_hub).last_status();
+    update_interval: 5s
+
+  - platform: template
+    name: Last Remote Button
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    lambda: return id(dreo_hub).last_button_event();
+    update_interval: 1s
+
+  - platform: template
+    name: Last MCU RX Frame
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    lambda: return id(dreo_hub).last_rx_frame_hex();
+    update_interval: 5s
+
+  - platform: template
+    name: Last MCU TX Frame
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    lambda: return id(dreo_hub).last_tx_frame_hex();
+    update_interval: 5s
+
+  - platform: template
+    name: DP Map
+    entity_category: diagnostic
+    internal: ${debug_entities_internal}
+    lambda: return id(dreo_hub).seen_dps_summary();
+    update_interval: 5s

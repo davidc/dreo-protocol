@@ -1,0 +1,19 @@
+.DS_Store
+.esphome/
+build/
+build-artifacts/
+secrets.yaml
+20*-local-command-*.txt
+__pycache__/
+*.pyc
+*.elf
+*.map
+*.o
+*.a
+
+# Do not publish vendor firmware dumps or derived disassembly.
+*stock*.bin
+*dump*.bin
+dreo_app.bin
+dreo_chunks/
+dreo_analysis/
