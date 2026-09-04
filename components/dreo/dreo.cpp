@@ -226,6 +226,7 @@ void Dreo::handle_datapoints_(const uint8_t *buffer, size_t len) {
 
     datapoint.len = data_size;
 
+    bool supported = true;
     switch (datapoint.type) {
       case DreoDatapointType::BOOLEAN:
         if (data_size != 1) {
@@ -236,11 +237,18 @@ void Dreo::handle_datapoints_(const uint8_t *buffer, size_t len) {
         ESP_LOGD(TAG, "Datapoint %u update to %s", datapoint.id, ONOFF(datapoint.value_bool));
         break;
       case DreoDatapointType::INTEGER:
-        if (data_size != 4) {
+        if (data_size != 1 && data_size != 2 && data_size != 4) {
           ESP_LOGW(TAG, "Datapoint %u has bad integer len %zu", datapoint.id, data_size);
           return;
         }
-        datapoint.value_uint = encode_uint32(data[0], data[1], data[2], data[3]);
+        {
+          int64_t value = 0;
+          for (size_t i = 0; i < data_size; i++)
+            value = (value << 8) | data[i];
+          if (data[0] & 0x80)
+            value -= int64_t{1} << (data_size * 8);
+          datapoint.value_int = static_cast<int32_t>(value);
+        }
         ESP_LOGD(TAG, "Datapoint %u update to %d", datapoint.id, datapoint.value_int);
         break;
       case DreoDatapointType::ENUM:
@@ -253,11 +261,14 @@ void Dreo::handle_datapoints_(const uint8_t *buffer, size_t len) {
         break;
       default:
         ESP_LOGW(TAG, "Datapoint %u has unknown type %#02hhX", datapoint.id, static_cast<uint8_t>(datapoint.type));
-        return;
+        supported = false;
+        break;
     }
 
     len -= data_size + 5;
     buffer = data + data_size;
+    if (!supported)
+      continue;
 
     // drop update if datapoint is in ignore_mcu_datapoint_update list
     bool skip = false;
@@ -412,9 +423,28 @@ void Dreo::set_numeric_datapoint_value_(uint8_t datapoint_id, DreoDatapointType 
   } else if (datapoint->type != datapoint_type) {
     ESP_LOGE(TAG, "Attempt to set datapoint %u with incorrect type", datapoint_id);
     return;
-  } else if (!forced && datapoint->value_uint == value) {
-    ESP_LOGV(TAG, "Not sending unchanged value");
-    return;
+  } else {
+    if (datapoint_type == DreoDatapointType::INTEGER)
+      length = datapoint->len;
+
+    bool unchanged = false;
+    switch (datapoint_type) {
+      case DreoDatapointType::BOOLEAN:
+        unchanged = datapoint->value_bool == static_cast<bool>(value);
+        break;
+      case DreoDatapointType::INTEGER:
+        unchanged = datapoint->value_int == static_cast<int32_t>(value);
+        break;
+      case DreoDatapointType::ENUM:
+        unchanged = datapoint->value_enum == static_cast<uint8_t>(value);
+        break;
+      default:
+        break;
+    }
+    if (!forced && unchanged) {
+      ESP_LOGV(TAG, "Not sending unchanged value");
+      return;
+    }
   }
 
   std::vector<uint8_t> data;
@@ -439,7 +469,7 @@ void Dreo::set_numeric_datapoint_value_(uint8_t datapoint_id, DreoDatapointType 
 void Dreo::send_datapoint_command_(uint8_t datapoint_id, DreoDatapointType datapoint_type, std::vector<uint8_t> data) {
   std::vector<uint8_t> buffer;
   buffer.push_back(datapoint_id);
-  buffer.push_back(0);  // Unknown (always 0)
+  buffer.push_back(this->command_datapoint_marker_);
   buffer.push_back(static_cast<uint8_t>(datapoint_type));
   buffer.push_back(data.size() >> 8);
   buffer.push_back(data.size() >> 0);
@@ -465,4 +495,3 @@ void Dreo::register_listener(uint8_t datapoint_id, const std::function<void(Dreo
 DreoInitState Dreo::get_init_state() { return this->init_state_; }
 
 }  // namespace esphome::dreo
-

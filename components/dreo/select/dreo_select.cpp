@@ -7,12 +7,20 @@ static const char *const TAG = "dreo.select";
 
 void DreoSelect::setup() {
   this->parent_->register_listener(this->select_id_, [this](const DreoDatapoint &datapoint) {
-    uint8_t enum_value = datapoint.value_enum;
-    ESP_LOGV(TAG, "MCU reported select %u value %u", this->select_id_, enum_value);
+    int32_t enum_value;
+    if (this->is_int_ && datapoint.type == DreoDatapointType::INTEGER) {
+      enum_value = datapoint.value_int;
+    } else if (!this->is_int_ && datapoint.type == DreoDatapointType::ENUM) {
+      enum_value = datapoint.value_enum;
+    } else {
+      ESP_LOGW(TAG, "Reported type (%d) does not match configured select type", static_cast<int>(datapoint.type));
+      return;
+    }
+    ESP_LOGV(TAG, "MCU reported select %u value %d", this->select_id_, enum_value);
     auto mappings = this->mappings_;
     auto it = std::find(mappings.cbegin(), mappings.cend(), enum_value);
     if (it == mappings.end()) {
-      ESP_LOGW(TAG, "Invalid value %u", enum_value);
+      ESP_LOGW(TAG, "Invalid value %d", enum_value);
       return;
     }
     size_t mapping_idx = std::distance(mappings.cbegin(), it);
@@ -47,4 +55,3 @@ void DreoSelect::dump_config() {
 }
 
 }  // namespace esphome::dreo
-

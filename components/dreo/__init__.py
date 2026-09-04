@@ -8,6 +8,7 @@ DEPENDENCIES = ["uart"]
 CODEOWNERS = ["@davidc"]
 
 CONF_IGNORE_MCU_UPDATE_ON_DATAPOINTS = "ignore_mcu_update_on_datapoints"
+CONF_COMMAND_DATAPOINT_MARKER = "command_datapoint_marker"
 
 CONF_ON_DATAPOINT_UPDATE = "on_datapoint_update"
 CONF_DATAPOINT_TYPE = "datapoint_type"
@@ -67,6 +68,7 @@ CONFIG_SCHEMA = (
     cv.Schema(
         {
             cv.GenerateID(): cv.declare_id(Dreo),
+            cv.Optional(CONF_COMMAND_DATAPOINT_MARKER, default=0): cv.uint8_t,
             cv.Optional(CONF_IGNORE_MCU_UPDATE_ON_DATAPOINTS): cv.ensure_list(
                 cv.uint8_t
             ),
@@ -93,6 +95,7 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await uart.register_uart_device(var, config)
+    cg.add(var.set_command_datapoint_marker(config[CONF_COMMAND_DATAPOINT_MARKER]))
     if CONF_IGNORE_MCU_UPDATE_ON_DATAPOINTS in config:
         for dp in config[CONF_IGNORE_MCU_UPDATE_ON_DATAPOINTS]:
             cg.add(var.add_ignore_mcu_update_on_datapoints(dp))

@@ -14,7 +14,7 @@ namespace esphome::dreo {
 enum class DreoDatapointType : uint8_t {
   // RAW = 0x00,      // variable length
   BOOLEAN = 0x01,  // 1 byte (0/1)
-  INTEGER = 0x02,  // 4 byte
+  INTEGER = 0x02,  // 1/2/4 bytes
   // STRING = 0x03,   // variable length
   ENUM = 0x04,     // 1 byte
   // BITMASK = 0x05,  // 1/2/4 bytes
@@ -26,7 +26,7 @@ struct DreoDatapoint {
   size_t len;
   union {
     bool value_bool;
-    int value_int;
+    int32_t value_int;
     uint32_t value_uint;
     uint8_t value_enum;
   };
@@ -80,6 +80,7 @@ class Dreo final : public Component, public uart::UARTDevice {
   void add_ignore_mcu_update_on_datapoints(uint8_t ignore_mcu_update_on_datapoints) {
     this->ignore_mcu_update_on_datapoints_.push_back(ignore_mcu_update_on_datapoints);
   }
+  void set_command_datapoint_marker(uint8_t marker) { this->command_datapoint_marker_ = marker; }
   template<typename F> void add_on_initialized_callback(F &&callback) {
     this->initialized_callback_.add(std::forward<F>(callback));
   }
@@ -114,7 +115,7 @@ class Dreo final : public Component, public uart::UARTDevice {
   optional<DreoCommandType> expected_response_{};
   CallbackManager<void()> initialized_callback_{};
   uint8_t sequence_ = 0;
+  uint8_t command_datapoint_marker_ = 0;
 };
 
 }  // namespace esphome::dreo
-

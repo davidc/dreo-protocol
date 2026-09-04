@@ -7,8 +7,23 @@ static const char *const TAG = "dreo.binary_sensor";
 
 void DreoBinarySensor::setup() {
   this->parent_->register_listener(this->sensor_id_, [this](const DreoDatapoint &datapoint) {
-    ESP_LOGV(TAG, "MCU reported binary sensor %u is: %s", datapoint.id, ONOFF(datapoint.value_bool));
-    this->publish_state(datapoint.value_bool);
+    bool value;
+    switch (datapoint.type) {
+      case DreoDatapointType::BOOLEAN:
+        value = datapoint.value_bool;
+        break;
+      case DreoDatapointType::INTEGER:
+        value = datapoint.value_int != 0;
+        break;
+      case DreoDatapointType::ENUM:
+        value = datapoint.value_enum != 0;
+        break;
+      default:
+        ESP_LOGW(TAG, "Reported type (%d) is not supported by binary sensor", static_cast<int>(datapoint.type));
+        return;
+    }
+    ESP_LOGV(TAG, "MCU reported binary sensor %u is: %s", datapoint.id, ONOFF(value));
+    this->publish_state(value);
   });
 }
 
@@ -20,4 +35,3 @@ void DreoBinarySensor::dump_config() {
 }
 
 }  // namespace esphome::dreo
-

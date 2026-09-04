@@ -72,8 +72,12 @@ def parse_dp(data: bytes, offset=0):
     elif dp.dp_type == 0x02:  # int
         if dp.length == 1:
             dp.value = struct.unpack(">b", dp.value)[0]
-        else:
+        elif dp.length == 2:
+            dp.value = struct.unpack(">h", dp.value)[0]
+        elif dp.length == 4:
             dp.value = struct.unpack(">i", dp.value)[0]
+        else:
+            raise ValueError(f"Unsupported integer length {dp.length}")
     elif dp.dp_type == 0x04:  # enum
         dp.value = struct.unpack(">B", dp.value)[0]
 
